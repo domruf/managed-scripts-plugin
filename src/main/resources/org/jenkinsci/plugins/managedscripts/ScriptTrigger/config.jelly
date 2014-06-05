@@ -1,0 +1,69 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+    <st:adjunct assumes="org.kohsuke.stapler.framework.prototype.prototype" includes="org.kohsuke.stapler.bind"/>
+    
+	<st:once>
+		<script type="text/javascript" src="${rootURL}/plugin/managed-scripts/js/managed-scripts.js" />
+	</st:once>
+	<j:choose>
+		<j:when test="${empty(descriptor.availableBuildTemplates)}">
+			<f:entry title="">
+				<div>
+					No build templates are defined. Please define one
+					<a href="/configfiles">here</a>.
+				</div>
+			</f:entry>
+		</j:when>
+		<j:otherwise>
+			<f:entry title="${%Script}" field="buildStepContent">
+				<select name="buildStepId" onChange="ms_initDetailLink('${rootURL}', this);ms_showParams(this, this.value);">
+					<option value="">(Default)</option>
+					<j:forEach var="inst" items="${descriptor.availableBuildTemplates}" varStatus="loop">
+						<j:choose>
+							<j:when test="${inst.id == instance.buildStepId}">
+								<option value="${inst.id}" selected="selected">${inst.name} - ${inst.comment}</option>
+							</j:when>
+							<j:otherwise>
+								<option value="${inst.id}">${inst.name} - ${inst.comment}</option>
+							</j:otherwise>
+						</j:choose>
+					</j:forEach>
+				</select>
+				<a target="_blank" name="showDetailLink" href="" style="display:none;" onclick="window.open(this.href,'window','width=900,height=640,resizable,scrollbars,toolbar,menubar') ;return false;"> view selected script</a>
+                    <div name="argumentDescription" id="argumentDescription"/>
+				<f:block>
+					<table name="scriptBuildStepArgs" id="scriptBuildStepArgs">
+						<f:optionalBlock name="defineArgs" inline="true" title="${%Define arguments}" checked="${!empty(instance.buildStepArgs)}" help="/plugin/managed-scripts/help-defineArgs.html">
+							<f:entry>
+								<f:repeatable var="arg" items="${instance.buildStepArgs}" name="buildStepArgs" noAddButton="true" minimum="1">
+									<table width="100%">
+										<f:entry>
+											<div name="argName"><st:nbsp/></div>
+											<input type="text" name="arg" value="${arg}" size="80"/>
+											<input type="button" name="delete_button" value="${%Delete}" class="repeatable-delete show-if-not-only" style="margin-left: 1em;" />
+											<input type="button" name="add_button" onClick="ms_labelArgs()" value="${%Add argument}" class="repeatable-add show-if-last" />
+										</f:entry>
+									</table>
+								</f:repeatable>
+							</f:entry>
+						</f:optionalBlock>
+					</table>
+				</f:block>
+			</f:entry>
+		</j:otherwise>
+	</j:choose>
+	<st:bind var="desc" value="${descriptor}"/>
+	<st:once>
+		<script type="text/javascript">
+			Event.observe(window, 'load', function() { 
+				var all = new Array();
+	   			all = document.getElementsByName('buildStepId');
+				for(var i = 0; i &lt; all.length; i++) {
+					ms_initDetailLink('<j:out value="${rootURL}" />', all.item(i));
+					ms_showParams(all.item(i), all.item(i).value);
+					ms_getArgs(all.item(i), all.item(i).value);
+				}
+			});
+		</script>
+	</st:once>
+</j:jelly>

@@ -8,6 +8,8 @@ import hudson.Util;
 import hudson.model.BuildListener;
 import hudson.model.AbstractBuild;
 import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Notifier;
+import hudson.tasks.Publisher;
 import hudson.tasks.Builder;
 
 import java.io.IOException;
@@ -17,7 +19,6 @@ import java.util.logging.Logger;
 
 
 import org.jenkinsci.lib.configprovider.model.Config;
-import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import org.jenkinsci.plugins.managedscripts.ScriptRunner.ArgValue;
@@ -34,7 +35,7 @@ import org.jenkinsci.plugins.managedscripts.ScriptRunner.ScriptBuildStepArgs;
  * @author Dominik Bartholdi (imod)
  * @author Dominik Ruf
  */
-public class ScriptBuildStep extends Builder {
+public class ScriptPostBuild extends Notifier {
     private static Logger log = Logger.getLogger(ScriptRunner.class.getName());
 
     private final String buildStepId;
@@ -49,7 +50,7 @@ public class ScriptBuildStep extends Builder {
      *            whether to save the args and arg values (the boolean is required because of html form submission, which also sends hidden values)
      */
     @DataBoundConstructor
-    public ScriptBuildStep(String buildStepId, ScriptBuildStepArgs scriptBuildStepArgs)
+    public ScriptPostBuild(String buildStepId, ScriptBuildStepArgs scriptBuildStepArgs)
     {
         this.buildStepId = buildStepId;
         List<String> l = null;
@@ -63,7 +64,7 @@ public class ScriptBuildStep extends Builder {
         this.buildStepArgs = l == null ? null : l.toArray(new String[l.size()]);
     }
 
-    public ScriptBuildStep(String buildStepId, String[] buildStepArgs) {
+    public ScriptPostBuild(String buildStepId, String[] buildStepArgs) {
         this.buildStepId = buildStepId;
         this.buildStepArgs = buildStepArgs;
     }
@@ -82,6 +83,7 @@ public class ScriptBuildStep extends Builder {
         try {
             FilePath workingDir = build.getWorkspace();
             EnvVars env = build.getEnvironment(listener);
+            env.put("BUILD_RESULT", build.getResult().toString());
             Config buildStepConfig = getDescriptor().getBuildStepConfigById(buildStepId);
             returnValue = ScriptRunner.run(buildStepConfig, listener.getLogger(), listener.getLogger(), buildStepId, buildStepArgs, log, env, workingDir, launcher, build);
         } catch (IOException e) {
@@ -103,6 +105,6 @@ public class ScriptBuildStep extends Builder {
     }
 
     @Extension(ordinal = 50)
-    public static class DescriptorImpl extends ScriptRunner.DescriptorImpl<Builder>{
+    public static class DescriptorImpl extends ScriptRunner.DescriptorImpl<Publisher>{
     }
 }
