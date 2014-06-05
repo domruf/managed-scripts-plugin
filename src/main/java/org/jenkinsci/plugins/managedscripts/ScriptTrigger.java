@@ -51,7 +51,7 @@ public class ScriptTrigger extends Trigger<BuildableItem> {
     private final String buildStepId;
     private final String[] buildStepArgs;
 
-    class ScriptTriggerCause extends Cause {
+    static class ScriptTriggerCause extends Cause {
         private String cause;
 
         public ScriptTriggerCause(String cause) {
@@ -66,19 +66,6 @@ public class ScriptTrigger extends Trigger<BuildableItem> {
         }
     }
 
-
-    public ScriptTrigger(String spec, List<ScriptConfig> configs){
-        this.buildStepId = "asdf";
-        List<String> l =  new ArrayList<String>();
-        l.add("qwer");
-        this.buildStepArgs = l.toArray(new String[l.size()]);
-    }
-    public ScriptTrigger(){
-        this.buildStepId = "asdf";
-        List<String> l =  new ArrayList<String>();
-        l.add("qwer");
-        this.buildStepArgs = l.toArray(new String[l.size()]);
-    }
     /**
      * The constructor used at form submission
      *

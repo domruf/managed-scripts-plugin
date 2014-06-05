@@ -8,7 +8,6 @@ import hudson.model.AbstractBuild;
 import hudson.model.Computer;
 import hudson.model.Describable;
 import hudson.model.AbstractProject;
-import hudson.model.labels.LabelExpression;
 import hudson.tasks.Shell;
 import hudson.tasks.BuildStep;
 import hudson.tasks.BuildStepDescriptor;
