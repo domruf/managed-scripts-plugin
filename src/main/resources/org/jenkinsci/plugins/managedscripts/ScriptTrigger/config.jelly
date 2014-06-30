@@ -15,6 +15,11 @@
 			</f:entry>
 		</j:when>
 		<j:otherwise>
+            <f:entry title="${%Schedule}" help="xxx">
+                <f:textarea name="cronTabSpec"
+                            checkUrl="'${rootURL}/trigger/TimerTrigger/check?value='+encodeURIComponent(this.value)"
+                            value="${instance.spec}"/>
+            </f:entry>
 			<f:entry title="${%Script}" field="buildStepContent">
 				<select name="buildStepId" onChange="ms_initDetailLink('${rootURL}', this);ms_showParams(this, this.value);">
 					<option value="">(Default)</option>

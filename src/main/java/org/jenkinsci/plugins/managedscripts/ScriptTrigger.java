@@ -8,8 +8,10 @@ import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.model.Cause;
 import hudson.model.TaskListener;
+import hudson.model.FreeStyleProject;
 import hudson.model.Item;
 import hudson.model.BuildableItem;
+import hudson.model.AbstractProject;
 import hudson.tasks.BuildStepMonitor;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
@@ -75,8 +77,8 @@ public class ScriptTrigger extends Trigger<BuildableItem> {
      *            whether to save the args and arg values (the boolean is required because of html form submission, which also sends hidden values)
      */
     @DataBoundConstructor
-    public ScriptTrigger(String buildStepId, ScriptBuildStepArgs scriptBuildStepArgs) throws ANTLRException {
-        super("* * * * *");
+    public ScriptTrigger(String cronTabSpec, String buildStepId, ScriptBuildStepArgs scriptBuildStepArgs) throws ANTLRException {
+        super(cronTabSpec != null ? cronTabSpec : "H * * * *");
         this.buildStepId = buildStepId;
         List<String> l = null;
         if (scriptBuildStepArgs != null && scriptBuildStepArgs.defineArgs
@@ -87,11 +89,6 @@ public class ScriptTrigger extends Trigger<BuildableItem> {
             }
         }
         this.buildStepArgs = l == null ? null : l.toArray(new String[l.size()]);
-    }
-
-    public ScriptTrigger(String buildStepId, String[] buildStepArgs) {
-        this.buildStepId = buildStepId;
-        this.buildStepArgs = buildStepArgs;
     }
 
     /**
@@ -107,6 +104,14 @@ public class ScriptTrigger extends Trigger<BuildableItem> {
             ByteArrayOutputStream stderr = new ByteArrayOutputStream();
             PrintStream psout = new PrintStream(stdout);
             PrintStream pserr = new PrintStream(stderr);
+            if(this.job instanceof hudson.model.AbstractProject) {
+                FilePath[] myscmpaths = ((AbstractProject) this.job).getScm().getModuleRoots(workingDir, ((FreeStyleProject) this.job).getLastBuild());
+                StringBuilder paths = new StringBuilder();
+                for (FilePath p : myscmpaths) {
+                    paths.append(p.getName() + ",");
+                }
+                env.put("scm_paths", paths.toString().substring(0, paths.length()-1));
+            }
             Config buildStepConfig = getDescriptor().getBuildStepConfigById(buildStepId);
             if(ScriptRunner.run(buildStepConfig, psout, pserr, buildStepId, buildStepArgs, log, env, workingDir, launcher, null)) {
                 Cause cause = new ScriptTriggerCause("script \"" + buildStepConfig.name + "\" returned 0 and said <br/>\n" + stdout.toString("ISO-8859-1"));

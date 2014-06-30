@@ -7,6 +7,7 @@ import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.Computer;
 import hudson.model.Describable;
+import hudson.model.FreeStyleProject;
 import hudson.model.AbstractProject;
 import hudson.tasks.Shell;
 import hudson.tasks.BuildStep;
@@ -135,6 +136,14 @@ public class ScriptRunner {
         /*
          * Execute command remotely
          */
+        if(build != null && build.getProject() instanceof hudson.model.AbstractProject) {
+            FilePath[] myscmpaths = ((AbstractProject) build.getProject()).getScm().getModuleRoots(workingDir, ((FreeStyleProject) build.getProject()).getLastBuild());
+            StringBuilder paths = new StringBuilder();
+            for (FilePath p : myscmpaths) {
+                paths.append(p.getName() + ",");
+            }
+            env.put("scm_paths", paths.toString().substring(0, paths.length()-1));
+        }
         int r = launcher.launch().cmds(args).envs(env).stderr(stderr).stdout(stdout).pwd(workingDir).join();
         returnValue = (r == 0);
 
