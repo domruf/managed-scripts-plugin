@@ -86,6 +86,7 @@ THE SOFTWARE.
                 }
                 function update() {
                     editor.setOption("mode", looksLike(editor.getValue()));
+                    editor.setOption("lineWrapping", true);
                     editor.setOption("indentUnit", 4);
                     editor.setOption("extraKeys", {
                             Tab: function (cm) {
