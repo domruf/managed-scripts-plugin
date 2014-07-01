@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 
 import jenkins.model.Jenkins;
 
+import net.sf.json.JSONObject;
 import org.jenkinsci.lib.configprovider.ConfigProvider;
 import org.jenkinsci.lib.configprovider.model.Config;
 import org.jenkinsci.plugins.managedscripts.ScriptConfig.Arg;
@@ -133,7 +134,9 @@ public class ScriptRunner {
             for (FilePath p : myscmpaths) {
                 paths.append(p.getName() + ",");
             }
-            env.put("scm_paths", paths.toString().substring(0, paths.length()-1).replace("workspace", "."));
+            env.put("job_config_file", build.getProject().getConfigFile().getFile().toString());
+            env.put("scm_paths", paths.toString().substring(0, paths.length()-1).replace("workspace", ".")); // TODO: remove me
+            env.put("SCRIPTTRIGGER_CAUSE_DATA", JSONObject.fromObject(build.getCause(ScriptTrigger.ScriptTriggerCause.class).data).toString());
         }
         ByteArrayOutputStream mstdout = new ByteArrayOutputStream();
         ByteArrayOutputStream mstderr = new ByteArrayOutputStream();

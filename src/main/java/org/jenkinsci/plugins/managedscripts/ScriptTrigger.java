@@ -29,14 +29,11 @@ import org.kohsuke.stapler.bind.JavaScriptMethod;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * LibraryBuildStep {@link hudson.tasks.Builder}.
@@ -55,6 +52,7 @@ public class ScriptTrigger extends Trigger<BuildableItem> {
 
     static class ScriptTriggerCause extends Cause {
         private String cause;
+        public HashMap<String,String> data = new HashMap<String, String>();
 
         public ScriptTriggerCause(String cause) {
             if (cause != null) {
@@ -114,7 +112,14 @@ public class ScriptTrigger extends Trigger<BuildableItem> {
             }
             Config buildStepConfig = getDescriptor().getBuildStepConfigById(buildStepId);
             if(ScriptRunner.run(buildStepConfig, psout, pserr, buildStepId, buildStepArgs, log, env, workingDir, launcher, ((FreeStyleProject)this.job).getLastBuild())) {
-                Cause cause = new ScriptTriggerCause("script \"" + buildStepConfig.name + "\" returned 0 and said <br/>\n" + stdout.toString("ISO-8859-1"));
+                ScriptTriggerCause cause = new ScriptTriggerCause("script \"" + buildStepConfig.name + "\" returned 0 and said <br/>\n" + stdout.toString("ISO-8859-1"));
+                for(String line: stdout.toString("ISO-8859-1").split("\\n")){
+                    Pattern token_pattern = Pattern.compile("SET\\sCAUSE\\:\\s?([\\w_-]+)=\"([^\"]+)\"");
+                    Matcher matcher = token_pattern.matcher(line);
+                    while(matcher.find()) {
+                        cause.data.put(matcher.group(1), matcher.group(2));
+                    }
+                }
                 job.scheduleBuild(0, cause);
             }
             log.log(Level.FINE, stdout.toString("ISO-8859-1"));
