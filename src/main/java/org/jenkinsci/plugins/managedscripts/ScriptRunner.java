@@ -1,30 +1,21 @@
 package org.jenkinsci.plugins.managedscripts;
 
-import hudson.EnvVars;
-import hudson.ExtensionList;
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.model.AbstractBuild;
-import hudson.model.Computer;
-import hudson.model.Describable;
-import hudson.model.FreeStyleProject;
-import hudson.model.AbstractProject;
+import hudson.*;
+import hudson.model.*;
 import hudson.tasks.Shell;
 import hudson.tasks.BuildStep;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.FormValidation;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import jenkins.model.Jenkins;
 
@@ -32,6 +23,7 @@ import org.jenkinsci.lib.configprovider.ConfigProvider;
 import org.jenkinsci.lib.configprovider.model.Config;
 import org.jenkinsci.plugins.managedscripts.ScriptConfig.Arg;
 import org.jenkinsci.plugins.managedscripts.ScriptConfig.ScriptConfigProvider;
+import org.jenkinsci.plugins.tokenmacro.DataBoundTokenMacro;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.kohsuke.stapler.QueryParameter;
@@ -120,7 +112,6 @@ public class ScriptRunner {
         if (buildStepArgs != null) {
             for (String arg : buildStepArgs) {
                 try {
-                    // TODO: is there a way to also do this for triggers?
                     if(build != null){
                         args.add(TokenMacro.expandAll(build, null, arg, false, null));
                     }else{
@@ -142,13 +133,55 @@ public class ScriptRunner {
             for (FilePath p : myscmpaths) {
                 paths.append(p.getName() + ",");
             }
-            env.put("scm_paths", paths.toString().substring(0, paths.length()-1));
+            env.put("scm_paths", paths.toString().substring(0, paths.length()-1).replace("workspace", "."));
         }
-        int r = launcher.launch().cmds(args).envs(env).stderr(stderr).stdout(stdout).pwd(workingDir).join();
+        ByteArrayOutputStream mstdout = new ByteArrayOutputStream();
+        ByteArrayOutputStream mstderr = new ByteArrayOutputStream();
+        PrintStream psout = new PrintStream(mstdout);
+        PrintStream pserr = new PrintStream(mstderr);
+        int r = launcher.launch().cmds(args).envs(env).stderr(pserr).stdout(psout).pwd(workingDir).join();
+
+        for(String line: mstdout.toString("ISO-8859-1").split("\\n")){
+            Pattern token_pattern = Pattern.compile("SET\\sTOKEN\\:\\s?([\\w_-]+)=\"([^\"]+)\"");
+            Matcher matcher = token_pattern.matcher(line);
+            while(matcher.find()) {
+                build.addAction(new MSAction(matcher.group(1), matcher.group(2)));
+            }
+            stdout.print(line);
+        }
+        for(String line: mstderr.toString("ISO-8859-1").split("\\n")){
+            stderr.print(line);
+        }
         returnValue = (r == 0);
 
         log.log(Level.FINE, "Finished script step");
         return returnValue;
+    }
+
+    public static class MSAction extends InvisibleAction {
+        public HashMap<String,String> tokens = new HashMap<String, String>();
+
+        public MSAction(String key, String value) {
+            tokens.put(key, value);
+        }
+    }
+
+    @Extension
+    public static class ManagedScriptsTokenMacro extends DataBoundTokenMacro {
+        @Override
+        public String evaluate(AbstractBuild<?, ?> context, TaskListener listener, String macroName) throws MacroEvaluationException, IOException, InterruptedException {
+            MSAction a = context.getAction(org.jenkinsci.plugins.managedscripts.ScriptRunner.MSAction.class);
+            if(a != null && a.tokens.containsKey(macroName)){
+                return a.tokens.get(macroName);
+            }else{
+                return "";
+            }
+        }
+
+        @Override
+        public boolean acceptsMacroName(String macroName) {
+            return macroName.toLowerCase().startsWith("msp_");
+        }
     }
 
     /**

@@ -113,7 +113,7 @@ public class ScriptTrigger extends Trigger<BuildableItem> {
                 env.put("scm_paths", paths.toString().substring(0, paths.length()-1));
             }
             Config buildStepConfig = getDescriptor().getBuildStepConfigById(buildStepId);
-            if(ScriptRunner.run(buildStepConfig, psout, pserr, buildStepId, buildStepArgs, log, env, workingDir, launcher, null)) {
+            if(ScriptRunner.run(buildStepConfig, psout, pserr, buildStepId, buildStepArgs, log, env, workingDir, launcher, ((FreeStyleProject)this.job).getLastBuild())) {
                 Cause cause = new ScriptTriggerCause("script \"" + buildStepConfig.name + "\" returned 0 and said <br/>\n" + stdout.toString("ISO-8859-1"));
                 job.scheduleBuild(0, cause);
             }
