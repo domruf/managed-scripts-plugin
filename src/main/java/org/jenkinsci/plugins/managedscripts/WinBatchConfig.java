@@ -18,8 +18,6 @@ import org.kohsuke.stapler.DataBoundConstructor;
  */
 public class WinBatchConfig extends ScriptConfig {
 
-    //public final List<Arg> args;
-
     @DataBoundConstructor
     public WinBatchConfig(String id, String name, String comment, String content, List<Arg> args) {
         super(id, name, comment, content, args);

@@ -129,7 +129,6 @@ public class ScriptRunner {
          * Execute command remotely
          */
         if(build != null && build.getProject() instanceof hudson.model.AbstractProject) {
-            //env.put("JOB_CONFIG_FILE", build.getProject().getConfigFile().getFile().toString());
             if(build.getCause(ScriptTrigger.ScriptTriggerCause.class) != null){
                 env.put("SCRIPTTRIGGER_CAUSE_DATA", JSONObject.fromObject(build.getCause(ScriptTrigger.ScriptTriggerCause.class).data).toString());
             }
