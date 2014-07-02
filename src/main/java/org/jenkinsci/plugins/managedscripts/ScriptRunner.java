@@ -129,14 +129,10 @@ public class ScriptRunner {
          * Execute command remotely
          */
         if(build != null && build.getProject() instanceof hudson.model.AbstractProject) {
-            FilePath[] myscmpaths = ((AbstractProject) build.getProject()).getScm().getModuleRoots(workingDir, ((FreeStyleProject) build.getProject()).getLastBuild());
-            StringBuilder paths = new StringBuilder();
-            for (FilePath p : myscmpaths) {
-                paths.append(p.getName() + ",");
+            //env.put("JOB_CONFIG_FILE", build.getProject().getConfigFile().getFile().toString());
+            if(build.getCause(ScriptTrigger.ScriptTriggerCause.class) != null){
+                env.put("SCRIPTTRIGGER_CAUSE_DATA", JSONObject.fromObject(build.getCause(ScriptTrigger.ScriptTriggerCause.class).data).toString());
             }
-            env.put("job_config_file", build.getProject().getConfigFile().getFile().toString());
-            env.put("scm_paths", paths.toString().substring(0, paths.length()-1).replace("workspace", ".")); // TODO: remove me
-            env.put("SCRIPTTRIGGER_CAUSE_DATA", JSONObject.fromObject(build.getCause(ScriptTrigger.ScriptTriggerCause.class).data).toString());
         }
         ByteArrayOutputStream mstdout = new ByteArrayOutputStream();
         ByteArrayOutputStream mstderr = new ByteArrayOutputStream();
@@ -148,7 +144,7 @@ public class ScriptRunner {
             Pattern token_pattern = Pattern.compile("SET\\sTOKEN\\:\\s?([\\w_-]+)=\"([^\"]+)\"");
             Matcher matcher = token_pattern.matcher(line);
             while(matcher.find()) {
-                build.addAction(new MSAction(matcher.group(1), matcher.group(2)));
+                build.addAction(new ManagedScriptAction(matcher.group(1), matcher.group(2)));
             }
             stdout.print(line);
         }
@@ -161,10 +157,10 @@ public class ScriptRunner {
         return returnValue;
     }
 
-    public static class MSAction extends InvisibleAction {
+    public static class ManagedScriptAction extends InvisibleAction {
         public HashMap<String,String> tokens = new HashMap<String, String>();
 
-        public MSAction(String key, String value) {
+        public ManagedScriptAction(String key, String value) {
             tokens.put(key, value);
         }
     }
@@ -173,7 +169,7 @@ public class ScriptRunner {
     public static class ManagedScriptsTokenMacro extends DataBoundTokenMacro {
         @Override
         public String evaluate(AbstractBuild<?, ?> context, TaskListener listener, String macroName) throws MacroEvaluationException, IOException, InterruptedException {
-            MSAction a = context.getAction(org.jenkinsci.plugins.managedscripts.ScriptRunner.MSAction.class);
+            ManagedScriptAction a = context.getAction(ManagedScriptAction.class);
             if(a != null && a.tokens.containsKey(macroName)){
                 return a.tokens.get(macroName);
             }else{

@@ -96,23 +96,15 @@ public class ScriptTrigger extends Trigger<BuildableItem> {
     public void run() {
         try {
             Launcher launcher = new Launcher.LocalLauncher(TaskListener.NULL);
-            FilePath workingDir = new FilePath(new FilePath(this.job.getRootDir()), "workspace");
-            EnvVars env = new EnvVars();
+            FilePath workingDir = new FilePath(this.job.getRootDir());
+            EnvVars env = ((AbstractProject)this.job).getEnvironment(null, null);
             ByteArrayOutputStream stdout = new ByteArrayOutputStream();
             ByteArrayOutputStream stderr = new ByteArrayOutputStream();
             PrintStream psout = new PrintStream(stdout);
             PrintStream pserr = new PrintStream(stderr);
-            if(this.job instanceof hudson.model.AbstractProject) {
-                FilePath[] myscmpaths = ((AbstractProject) this.job).getScm().getModuleRoots(workingDir, ((FreeStyleProject) this.job).getLastBuild());
-                StringBuilder paths = new StringBuilder();
-                for (FilePath p : myscmpaths) {
-                    paths.append(p.getName() + ",");
-                }
-                env.put("scm_paths", paths.toString().substring(0, paths.length()-1));
-            }
             Config buildStepConfig = getDescriptor().getBuildStepConfigById(buildStepId);
-            if(ScriptRunner.run(buildStepConfig, psout, pserr, buildStepId, buildStepArgs, log, env, workingDir, launcher, ((FreeStyleProject)this.job).getLastBuild())) {
-                ScriptTriggerCause cause = new ScriptTriggerCause("script \"" + buildStepConfig.name + "\" returned 0 and said <br/>\n" + stdout.toString("ISO-8859-1"));
+            if(ScriptRunner.run(buildStepConfig, psout, pserr, buildStepId, buildStepArgs, log, env, workingDir, launcher, ((AbstractProject)this.job).getLastBuild())) {
+                ScriptTriggerCause cause = new ScriptTriggerCause("script \"" + buildStepConfig.name + "\" returned 0\noutput:\n" + stdout.toString("ISO-8859-1"));
                 for(String line: stdout.toString("ISO-8859-1").split("\\n")){
                     Pattern token_pattern = Pattern.compile("SET\\sCAUSE\\:\\s?([\\w_-]+)=\"([^\"]+)\"");
                     Matcher matcher = token_pattern.matcher(line);
@@ -120,7 +112,7 @@ public class ScriptTrigger extends Trigger<BuildableItem> {
                         cause.data.put(matcher.group(1), matcher.group(2));
                     }
                 }
-                job.scheduleBuild(0, cause);
+                job.scheduleBuild(30, cause);
             }
             log.log(Level.FINE, stdout.toString("ISO-8859-1"));
             if(stderr.size() > 0){
