@@ -130,6 +130,7 @@ public class ScriptRunner {
          */
         if(build != null && build.getProject() instanceof hudson.model.AbstractProject) {
             if(build.getCause(ScriptTrigger.ScriptTriggerCause.class) != null){
+                // TODO: more general solution
                 env.put("SCRIPTTRIGGER_CAUSE_DATA", JSONObject.fromObject(build.getCause(ScriptTrigger.ScriptTriggerCause.class).data).toString());
             }
         }
@@ -138,14 +139,18 @@ public class ScriptRunner {
         PrintStream psout = new PrintStream(mstdout);
         PrintStream pserr = new PrintStream(mstderr);
         int r = launcher.launch().cmds(args).envs(env).stderr(pserr).stdout(psout).pwd(workingDir).join();
-
-        for(String line: mstdout.toString("ISO-8859-1").split("\\n")){
-            Pattern token_pattern = Pattern.compile("SET\\sTOKEN\\:\\s?([\\w_-]+)=\"([^\"]+)\"");
-            Matcher matcher = token_pattern.matcher(line);
-            while(matcher.find()) {
-                build.addAction(new ManagedScriptAction(matcher.group(1), matcher.group(2)));
+        if(build != null) {
+            ManagedScriptAction msa = new ManagedScriptAction();
+            for (String line : mstdout.toString("ISO-8859-1").split("\\n")) {
+                Pattern token_pattern = Pattern.compile("SET\\sTOKEN\\:\\s?([\\w_-]+)=(.+)");
+                Matcher matcher = token_pattern.matcher(line);
+                while (matcher.find()) {
+                    msa.tokens.put(matcher.group(1), matcher.group(2));
+                }
+                stdout.print(line);
             }
-            stdout.print(line);
+
+            build.addAction(msa);
         }
         for(String line: mstderr.toString("ISO-8859-1").split("\\n")){
             stderr.print(line);
@@ -156,24 +161,18 @@ public class ScriptRunner {
         return returnValue;
     }
 
-    public static class ManagedScriptAction extends InvisibleAction {
-        public HashMap<String,String> tokens = new HashMap<String, String>();
-
-        public ManagedScriptAction(String key, String value) {
-            tokens.put(key, value);
-        }
-    }
 
     @Extension
     public static class ManagedScriptsTokenMacro extends DataBoundTokenMacro {
         @Override
         public String evaluate(AbstractBuild<?, ?> context, TaskListener listener, String macroName) throws MacroEvaluationException, IOException, InterruptedException {
-            ManagedScriptAction a = context.getAction(ManagedScriptAction.class);
-            if(a != null && a.tokens.containsKey(macroName)){
-                return a.tokens.get(macroName);
-            }else{
-                return "";
+            List<ManagedScriptAction> actions = context.getActions(ManagedScriptAction.class);
+            for(ManagedScriptAction a: actions){
+                if(a != null && a.tokens.containsKey(macroName)){
+                    return a.tokens.get(macroName);
+                }
             }
+            return "";
         }
 
         @Override

@@ -103,7 +103,7 @@ public class ScriptTrigger extends Trigger<BuildableItem> {
             PrintStream psout = new PrintStream(stdout);
             PrintStream pserr = new PrintStream(stderr);
             Config buildStepConfig = getDescriptor().getBuildStepConfigById(buildStepId);
-            if(ScriptRunner.run(buildStepConfig, psout, pserr, buildStepId, buildStepArgs, log, env, workingDir, launcher, ((AbstractProject)this.job).getLastBuild())) {
+            if(ScriptRunner.run(buildStepConfig, psout, pserr, buildStepId, buildStepArgs, log, env, workingDir, launcher, null)) {
                 ScriptTriggerCause cause = new ScriptTriggerCause("script \"" + buildStepConfig.name + "\" returned 0\noutput:\n" + stdout.toString("ISO-8859-1"));
                 for(String line: stdout.toString("ISO-8859-1").split("\\n")){
                     Pattern token_pattern = Pattern.compile("SET\\sCAUSE\\:\\s?([\\w_-]+)=\"([^\"]+)\"");
